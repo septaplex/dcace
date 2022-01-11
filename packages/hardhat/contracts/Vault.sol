@@ -14,6 +14,7 @@ contract Vault {
     IERC20 public from;
     IERC20 public to;
     IExchange public exchange;
+    address[] public participants;
     mapping(address => uint256) public amountPerDay;
     mapping(address => mapping(IERC20 => uint256)) public balances;
 
@@ -35,6 +36,11 @@ contract Vault {
         require(amount > 0, Errors._AmountZero);
 
         balances[msg.sender][from] += amount;
+
+        if (!_isInArray(participants, msg.sender)) {
+            participants.push(msg.sender);
+        }
+
         IERC20(from).transferFrom(msg.sender, address(this), amount);
 
         emit Deposit(msg.sender, amount);
@@ -61,5 +67,12 @@ contract Vault {
         amountPerDay[msg.sender] = amountPerDay_;
 
         emit Allocate(msg.sender, amountPerDay_);
+    }
+
+    function _isInArray(address[] storage haystack, address needle) private view returns (bool) {
+        for (uint256 i = 0; i < haystack.length; i++) {
+            if (haystack[i] == needle) return true;
+        }
+        return false;
     }
 }

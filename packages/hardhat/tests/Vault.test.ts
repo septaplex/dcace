@@ -64,6 +64,28 @@ describe('Vault', () => {
       )
       expect(await vault.balances(user.address, usdc.address)).to.equal(amount)
     })
+
+    it('should add the sender to the participants array', async () => {
+      const amount = parseUnits('5000', 6)
+      await usdc.connect(user).approve(vault.address, amount)
+      await vault.connect(user).deposit(amount)
+
+      expect(await vault.participants(0)).to.equal(user.address)
+      await expect(vault.participants(1)).to.be.reverted
+    })
+
+    it("shouldn't add the sender to the participants array twice", async () => {
+      const amount = parseUnits('5000', 6)
+      await usdc.connect(user).approve(vault.address, amount)
+
+      await vault.connect(user).deposit(amount.div(2))
+      expect(await vault.participants(0)).to.equal(user.address)
+      await expect(vault.participants(1)).to.be.reverted
+
+      await vault.connect(user).deposit(amount.div(2))
+      expect(await vault.participants(0)).to.equal(user.address)
+      await expect(vault.participants(1)).to.be.reverted
+    })
   })
 
   describe('#withdraw()', () => {
