@@ -7,17 +7,19 @@ import { IExchange } from "./IExchange.sol";
 library Errors {
     string internal constant _AmountZero = "Amount can't be 0";
     string internal constant _WrongToken = "Token not allowed";
-    string internal constant _ExceedsBalance = "Requested amount exceeds balance";
+    string internal constant _ExceedsBalance = "Amount exceeds balance";
 }
 
 contract Vault {
     IERC20 public from;
     IERC20 public to;
     IExchange public exchange;
+    mapping(address => uint256) public amountPerDay;
     mapping(address => mapping(IERC20 => uint256)) public balances;
 
     event Deposit(address indexed sender, uint256 indexed amount);
     event Withdraw(address indexed sender, IERC20 token, uint256 indexed amount);
+    event Allocate(address indexed sender, uint256 indexed amountPerDay);
 
     constructor(
         IERC20 from_,
@@ -50,5 +52,14 @@ contract Vault {
         IERC20(token).transfer(msg.sender, amount);
 
         emit Withdraw(msg.sender, token, amount);
+    }
+
+    function allocate(uint256 amountPerDay_) external {
+        require(amountPerDay_ > 0, Errors._AmountZero);
+        require(amountPerDay_ <= balances[msg.sender][from], Errors._ExceedsBalance);
+
+        amountPerDay[msg.sender] = amountPerDay_;
+
+        emit Allocate(msg.sender, amountPerDay_);
     }
 }

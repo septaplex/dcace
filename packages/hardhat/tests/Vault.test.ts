@@ -100,4 +100,31 @@ describe('Vault', () => {
       expect(await vault.balances(user.address, usdc.address)).to.equal(0)
     })
   })
+
+  describe('#allocate()', () => {
+    it('should revert when 0 tokens are allocated', async () => {
+      const amountPerDay = 0
+
+      await expect(vault.connect(user).allocate(amountPerDay)).to.be.revertedWith("can't be 0")
+    })
+
+    it("should revert when allocated amount exceeds the user's balance", async () => {
+      const amountPerDay = 10
+
+      await expect(vault.connect(user).allocate(amountPerDay)).to.be.revertedWith('exceeds balance')
+    })
+
+    it('should be possible to create allocations', async () => {
+      const amount = 10
+      const amountPerDay = 1
+
+      await usdc.connect(user).approve(vault.address, amount)
+      await vault.connect(user).deposit(amount)
+
+      await expect(vault.connect(user).allocate(amountPerDay))
+        .to.emit(vault, 'Allocate')
+        .withArgs(user.address, amountPerDay)
+      expect(await vault.amountPerDay(user.address)).to.equal(1)
+    })
+  })
 })
