@@ -36,27 +36,29 @@ contract ExchangeSushi is IExchange {
         IERC20 from,
         IERC20 to,
         uint256 amount
-    ) public override {
+    ) public override returns (uint256) {
         from.transferFrom(msg.sender, address(this), amount);
         from.transfer(address(pair), amount);
 
         address beneficiary = msg.sender;
         (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
 
+        uint256 deltaX = amount * 997; // 3% fee
+        uint256 deltaY;
         if (pair.token0() == address(from)) {
             uint256 x = reserve0;
             uint256 y = reserve1;
-            uint256 deltaX = amount * 997; // 3% fee
-            uint256 deltaY = (y * deltaX) / ((x * 1000) + deltaX);
+            deltaY = (y * deltaX) / ((x * 1000) + deltaX);
             pair.swap(0, deltaY, beneficiary, new bytes(0));
         } else {
             uint256 x = reserve1;
             uint256 y = reserve0;
-            uint256 deltaX = amount * 997; // 3% fee
-            uint256 deltaY = (y * deltaX) / ((x * 1000) + deltaX);
+            deltaY = (y * deltaX) / ((x * 1000) + deltaX);
             pair.swap(deltaY, 0, beneficiary, new bytes(0));
         }
 
-        emit Swap(from, to, amount);
+        emit Swap(from, to, amount, deltaY);
+
+        return deltaY;
     }
 }

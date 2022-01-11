@@ -9,7 +9,7 @@ contract MockExchange is IExchange {
         IERC20 from,
         IERC20 to,
         uint256 amount
-    ) public override {
+    ) public override returns (uint256) {
         from.transferFrom(msg.sender, address(this), amount);
 
         address beneficiary = msg.sender;
@@ -17,6 +17,8 @@ contract MockExchange is IExchange {
 
         to.transfer(beneficiary, received);
 
-        emit Swap(from, to, amount);
+        emit Swap(from, to, amount, received);
+
+        return received;
     }
 }

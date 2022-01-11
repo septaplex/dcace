@@ -33,12 +33,15 @@ describe('ExchangeSushi', function () {
       const from = usdc.address
       const to = weth.address
       const amount = parseUnits('5000', 6)
+      const received = parseUnits('1.634225990655068318', 18) // Block #13979500
 
       const usdcBalanceBeforeSwap = await usdc.balanceOf(user.address)
       const wethBalanceBeforeSwap = await weth.balanceOf(user.address)
 
       await usdc.connect(user).approve(exchange.address, amount)
-      await expect(exchange.connect(user).swap(from, to, amount)).to.emit(exchange, 'Swap').withArgs(from, to, amount)
+      await expect(exchange.connect(user).swap(from, to, amount))
+        .to.emit(exchange, 'Swap')
+        .withArgs(from, to, amount, received)
 
       const usdcBalanceAfterSwap = await usdc.balanceOf(user.address)
       const wethBalanceAfterSwap = await weth.balanceOf(user.address)
@@ -47,19 +50,22 @@ describe('ExchangeSushi', function () {
       const wethBought = wethBalanceAfterSwap.sub(wethBalanceBeforeSwap)
 
       expect(usdcSold).to.equal(amount)
-      expect(wethBought).to.equal(parseUnits('1.634225990655068318', 18)) // Block #13979500
+      expect(wethBought).to.equal(received)
     })
 
     it('should be possible to swap tokens ((W)ETH -> USDC)', async () => {
       const from = weth.address
       const to = usdc.address
       const amount = parseUnits('1.5', 18)
+      const received = parseUnits('4561.846848', 6) // Block #13979500
 
       const wethBalanceBeforeSwap = await weth.balanceOf(user.address)
       const usdcBalanceBeforeSwap = await usdc.balanceOf(user.address)
 
       await weth.connect(user).approve(exchange.address, amount)
-      await expect(exchange.connect(user).swap(from, to, amount)).to.emit(exchange, 'Swap').withArgs(from, to, amount)
+      await expect(exchange.connect(user).swap(from, to, amount))
+        .to.emit(exchange, 'Swap')
+        .withArgs(from, to, amount, received)
 
       const wethBalanceAfterSwap = await weth.balanceOf(user.address)
       const usdcBalanceAfterSwap = await usdc.balanceOf(user.address)
@@ -68,7 +74,7 @@ describe('ExchangeSushi', function () {
       const usdcBought = usdcBalanceAfterSwap.sub(usdcBalanceBeforeSwap)
 
       expect(wethSold).to.equal(amount)
-      expect(usdcBought).to.equal(parseUnits('4561.846848', 6)) // Block #13979500
+      expect(usdcBought).to.equal(received)
     })
   })
 })
