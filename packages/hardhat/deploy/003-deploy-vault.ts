@@ -8,10 +8,11 @@ export default async ({ getNamedAccounts, deployments }: HardhatRuntimeEnvironme
 
   const from = process.env.FROM_ADDRESS
   const to = process.env.TO_ADDRESS
+  const exchange = process.env.EXCHANGE_ADDRESS
 
   const { address } = await deploy('Vault', {
     from: deployer,
-    args: [from, to],
+    args: [from, to, exchange],
     log: true
   })
 

@@ -2,6 +2,7 @@
 pragma solidity 0.8.11;
 
 import { IERC20 } from "./IERC20.sol";
+import { IExchange } from "./IExchange.sol";
 
 library Errors {
     string internal constant _AmountZero = "Amount can't be 0";
@@ -12,14 +13,20 @@ library Errors {
 contract Vault {
     IERC20 public from;
     IERC20 public to;
+    IExchange public exchange;
     mapping(address => mapping(IERC20 => uint256)) public balances;
 
     event Deposit(address indexed sender, uint256 indexed amount);
     event Withdraw(address indexed sender, IERC20 token, uint256 indexed amount);
 
-    constructor(IERC20 from_, IERC20 to_) {
+    constructor(
+        IERC20 from_,
+        IERC20 to_,
+        IExchange exchange_
+    ) {
         from = from_;
         to = to_;
+        exchange = exchange_;
     }
 
     function deposit(uint256 amount) external {
