@@ -3,7 +3,7 @@ import { BigNumber } from 'ethers'
 import { ethers, network } from 'hardhat'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
-const { parseUnits } = ethers.utils
+const { parseUnits, defaultAbiCoder } = ethers.utils
 
 import { calcTokenOwnership } from './utils'
 import { IERC20, MockExchange, Vault } from '../types'
@@ -375,6 +375,68 @@ describe('Vault', () => {
         // Summing up the individual user's "to" balances should roughly equal the amount of "to" tokens bought
         expect(toBalanceAlice.add(toBalanceBob).add(toBalanceCarol)).to.be.closeTo(toBoughtDay1.add(toBoughtDay2), 1e6)
       })
+    })
+  })
+
+  describe('#performUpkeep()', () => {
+    it('should call the "buy" function', async () => {
+      const performData = defaultAbiCoder.encode([], [])
+
+      // NOTE: We have to use this assertion which is dependent on `buy` as
+      //  Waffle's `calledOnContract` is not supported by Hardhat
+      await expect(vault.connect(keeper).performUpkeep(performData)).to.be.revertedWith('balance is 0')
+    })
+  })
+
+  describe('#checkUpkeep()', () => {
+    let checkData: string
+    let performData: string
+
+    beforeEach(() => {
+      checkData = defaultAbiCoder.encode([], [])
+      performData = defaultAbiCoder.encode([], [])
+    })
+
+    it('should return "false" if there are no deposits yet', async () => {
+      expect(await vault.checkUpkeep(checkData)).to.deep.equal([false, performData])
+    })
+
+    it('should return "false" if no users have allocated funds yet', async () => {
+      const amount = parseUnits('5000', 6)
+      await usdc.connect(user).approve(vault.address, amount)
+      await vault.connect(user).deposit(amount)
+
+      expect(await vault.checkUpkeep(checkData)).to.deep.equal([false, performData])
+    })
+
+    it('should return "false" if all users ran out of funds', async () => {
+      const amount = parseUnits('5000', 6)
+      await usdc.connect(user).approve(vault.address, amount)
+      await vault.connect(user).deposit(amount)
+
+      // User allocated all of the funds to be used ...
+      await vault.connect(user).allocate(amount)
+      // ... which causes this `buy` call to spend all the funds
+      await vault.connect(keeper).buy()
+
+      expect(await vault.checkUpkeep(checkData)).to.deep.equal([false, performData])
+    })
+
+    it('should return "true" if at least one user has enough funds deposited and allocated', async () => {
+      const amount = parseUnits('50', 6)
+
+      // Deposits
+      await usdc.connect(alice).approve(vault.address, amount)
+      await vault.connect(alice).deposit(amount)
+
+      await usdc.connect(bob).approve(vault.address, amount)
+      await vault.connect(bob).deposit(amount)
+
+      // Allocations
+      // NOTE: Only Bob allocates funds
+      await vault.connect(bob).allocate(amount)
+
+      expect(await vault.checkUpkeep(checkData)).to.deep.equal([true, performData])
     })
   })
 })

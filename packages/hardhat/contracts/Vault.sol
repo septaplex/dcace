@@ -3,6 +3,7 @@ pragma solidity 0.8.11;
 
 import { IERC20 } from "./IERC20.sol";
 import { IExchange } from "./IExchange.sol";
+import { IKeeperCompatible } from "./IKeeperCompatible.sol";
 
 library Errors {
     string internal constant _AmountZero = "Amount can't be 0";
@@ -12,7 +13,7 @@ library Errors {
     string internal constant _NothingToSell = "Nothing to sell";
 }
 
-contract Vault {
+contract Vault is IKeeperCompatible {
     IERC20 public from;
     IERC20 public to;
     IExchange public exchange;
@@ -72,22 +73,26 @@ contract Vault {
         emit Allocate(msg.sender, amountPerDay_);
     }
 
-    function buy() external returns (uint256) {
+    function performUpkeep(bytes calldata) external override {
+        buy();
+    }
+
+    function checkUpkeep(bytes calldata) external view override returns (bool, bytes memory) {
+        bool upkeepNeeded;
+        bytes memory performData = new bytes(0);
+
+        uint256 toSell = _calcAmountToSell();
+        uint256 vaultBalance = from.balanceOf(address(this));
+
+        if (vaultBalance > 0 && toSell > 0 && toSell <= vaultBalance) upkeepNeeded = true;
+
+        return (upkeepNeeded, performData);
+    }
+
+    function buy() public returns (uint256) {
         require(from.balanceOf(address(this)) > 0, Errors._BalanceZero);
 
-        uint256 fromSold;
-        for (uint256 i = 0; i < participants.length; i++) {
-            address participant = participants[i];
-            uint256 balance = balances[participant][from];
-            uint256 perDay = amountPerDay[participant];
-
-            // Exclude users who haven't allocated yet or don't have enough funds
-            if (perDay == 0 || balance < perDay) continue;
-
-            // Update the running total of `from` tokens to sell
-            fromSold += perDay;
-        }
-
+        uint256 fromSold = _calcAmountToSell();
         require(fromSold > 0, Errors._NothingToSell);
 
         from.approve(address(exchange), fromSold);
@@ -116,6 +121,24 @@ contract Vault {
         emit Buy(fromSold, toBought);
 
         return toBought;
+    }
+
+    function _calcAmountToSell() private view returns (uint256) {
+        uint256 result;
+
+        for (uint256 i = 0; i < participants.length; i++) {
+            address participant = participants[i];
+            uint256 balance = balances[participant][from];
+            uint256 perDay = amountPerDay[participant];
+
+            // Exclude users who haven't allocated yet or don't have enough funds
+            if (perDay == 0 || balance < perDay) continue;
+
+            // Update the running total of `from` tokens to sell
+            result += perDay;
+        }
+
+        return result;
     }
 
     function _isInArray(address[] storage haystack, address needle) private view returns (bool) {
