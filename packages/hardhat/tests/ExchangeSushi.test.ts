@@ -8,7 +8,7 @@ import { IERC20, ExchangeSushi } from '../types'
 
 const USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
 const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
-const SUSHI_V2_PAIR = '0x397FF1542f962076d0BFE58eA045FfA2d347ACa0' // USDC / (W)ETH
+const SUSHI_V2_ROUTER = '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F'
 const WHALE_ADDRESS = '0xE78388b4CE79068e89Bf8aA7f218eF6b9AB0e9d0'
 
 describe('ExchangeSushi', function () {
@@ -23,7 +23,7 @@ describe('ExchangeSushi', function () {
     const factory = await ethers.getContractFactory('ExchangeSushi', deployer)
     usdc = await ethers.getContractAt('IERC20', USDC_ADDRESS)
     weth = await ethers.getContractAt('IERC20', WETH_ADDRESS)
-    exchange = (await factory.deploy(SUSHI_V2_PAIR)) as ExchangeSushi
+    exchange = (await factory.deploy(SUSHI_V2_ROUTER)) as ExchangeSushi
     await network.provider.send('hardhat_impersonateAccount', [WHALE_ADDRESS])
     user = await ethers.getSigner(WHALE_ADDRESS)
   })

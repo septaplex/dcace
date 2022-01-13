@@ -5,31 +5,21 @@ import { IERC20 } from "./IERC20.sol";
 import { IExchange } from "./IExchange.sol";
 
 // Adaption of https://etherscan.io/address/0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F#code
-interface IUniswapV2Pair {
-    function swap(
-        uint256 amount0Out,
-        uint256 amount1Out,
+interface IUniswapV2Router02 {
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
         address to,
-        bytes calldata data
-    ) external;
-
-    function getReserves()
-        external
-        view
-        returns (
-            uint112 reserve0,
-            uint112 reserve1,
-            uint32 blockTimestampLast
-        );
-
-    function token0() external view returns (address);
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
 }
 
 contract ExchangeSushi is IExchange {
-    IUniswapV2Pair public immutable pair;
+    IUniswapV2Router02 public immutable router;
 
-    constructor(IUniswapV2Pair pair_) {
-        pair = pair_;
+    constructor(IUniswapV2Router02 router_) {
+        router = router_;
     }
 
     function swap(
@@ -38,27 +28,22 @@ contract ExchangeSushi is IExchange {
         uint256 amount
     ) public override returns (uint256) {
         from.transferFrom(msg.sender, address(this), amount);
-        from.transfer(address(pair), amount);
+        from.approve(address(router), amount);
 
+        // solhint-disable-next-line not-rely-on-time
+        uint256 deadline = block.timestamp;
         address beneficiary = msg.sender;
-        (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
 
-        uint256 deltaX = amount * 997; // 3% fee
-        uint256 deltaY;
-        if (pair.token0() == address(from)) {
-            uint256 x = reserve0;
-            uint256 y = reserve1;
-            deltaY = (y * deltaX) / ((x * 1000) + deltaX);
-            pair.swap(0, deltaY, beneficiary, new bytes(0));
-        } else {
-            uint256 x = reserve1;
-            uint256 y = reserve0;
-            deltaY = (y * deltaX) / ((x * 1000) + deltaX);
-            pair.swap(deltaY, 0, beneficiary, new bytes(0));
-        }
+        address[] memory path = new address[](2);
+        path[0] = address(from);
+        path[1] = address(to);
 
-        emit Swap(from, to, amount, deltaY);
+        uint256[] memory amounts = router.swapExactTokensForTokens(amount, 0, path, beneficiary, deadline);
 
-        return deltaY;
+        uint256 received = amounts[path.length - 1];
+
+        emit Swap(from, to, amount, received);
+
+        return received;
     }
 }
