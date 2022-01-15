@@ -140,4 +140,15 @@ describe('Registry', () => {
       expect(await registry.vaults(id)).to.deep.equal([id, AddressZero, AddressZero, AddressZero, isEntity])
     })
   })
+
+  describe('#tokensToVault()', () => {
+    it('should be possible to get the Vault address based on its "from" and "to" token pair', async () => {
+      const id = ethers.BigNumber.from(0)
+
+      await registry.connect(owner).addVault(vault.address)
+      expect(await registry.nextVaultId()).to.equal(id.add(1))
+
+      expect(await registry.tokensToVault(from, to)).to.equal(vault.address)
+    })
+  })
 })
