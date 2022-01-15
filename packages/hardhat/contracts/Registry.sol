@@ -24,6 +24,7 @@ contract Registry {
     mapping(IERC20 => mapping(IERC20 => IVault)) public tokensToVault;
 
     event AddVault(uint256 indexed id, IVault indexed vault, IERC20 from, IERC20 to);
+    event RemoveVault(uint256 indexed id, IVault indexed vault, IERC20 from, IERC20 to);
 
     modifier vaultExists(uint256 id) {
         require(vaults[id].isEntity, Errors._DoesNotExist);
@@ -53,6 +54,18 @@ contract Registry {
         emit AddVault(id, vault, from, to);
 
         return id;
+    }
+
+    function removeVault(uint256 id) external vaultExists(id) returns (bool) {
+        IVault vault = vaults[id].vault;
+        IERC20 from = vaults[id].from;
+        IERC20 to = vaults[id].to;
+
+        delete vaults[id];
+
+        emit RemoveVault(id, vault, from, to);
+
+        return true;
     }
 
     function getVault(uint256 id)

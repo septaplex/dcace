@@ -76,6 +76,25 @@ describe('Registry', () => {
     })
   })
 
+  describe('#removeVault()', () => {
+    it("should revert when the Vault doesn't exist", async () => {
+      await expect(registry.connect(owner).removeVault(0)).to.be.revertedWith("doesn't exist")
+    })
+
+    it('should be possible to remove a Vault', async () => {
+      const id = ethers.BigNumber.from(0)
+
+      await registry.connect(owner).addVault(vault.address)
+      expect(await registry.nextVaultId()).to.equal(id.add(1))
+
+      await expect(registry.connect(owner).removeVault(id))
+        .to.emit(registry, 'RemoveVault')
+        .withArgs(id, vault.address, from, to)
+
+      await expect(registry.getVault(id)).to.be.revertedWith("doesn't exist")
+    })
+  })
+
   describe('#getVault()', () => {
     it("should revert when the Vault doesn't exist", async () => {
       await expect(registry.connect(owner).getVault(0)).to.be.revertedWith("doesn't exist")
