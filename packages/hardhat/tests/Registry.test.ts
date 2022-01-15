@@ -75,4 +75,20 @@ describe('Registry', () => {
       expect(await registry.tokensToVault(from, to)).to.deep.equal(vault.address)
     })
   })
+
+  describe('#getVault()', () => {
+    it("should revert when the Vault doesn't exist", async () => {
+      await expect(registry.connect(owner).getVault(0)).to.be.revertedWith("doesn't exist")
+    })
+
+    it('should be possible to get information about a Vault', async () => {
+      const id = ethers.BigNumber.from(0)
+      const isEntity = true
+
+      await registry.connect(owner).addVault(vault.address)
+      expect(await registry.nextVaultId()).to.equal(id.add(1))
+
+      expect(await registry.getVault(id)).to.deep.equal([id, vault.address, from, to, isEntity])
+    })
+  })
 })
