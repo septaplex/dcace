@@ -121,4 +121,23 @@ describe('Registry', () => {
       expect(await registry.nextVaultId()).to.equal(1)
     })
   })
+
+  describe('#vaults()', () => {
+    it('should be possible to get information about a Vault', async () => {
+      const id = ethers.BigNumber.from(0)
+      const isEntity = true
+
+      await registry.connect(owner).addVault(vault.address)
+      expect(await registry.nextVaultId()).to.equal(id.add(1))
+
+      expect(await registry.vaults(id)).to.deep.equal([id, vault.address, from, to, isEntity])
+    })
+
+    it("shouldn't revert for non-existent Vaults", async () => {
+      const id = ethers.BigNumber.from(0)
+      const isEntity = false
+
+      expect(await registry.vaults(id)).to.deep.equal([id, AddressZero, AddressZero, AddressZero, isEntity])
+    })
+  })
 })
