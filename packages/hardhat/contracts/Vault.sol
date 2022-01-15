@@ -2,6 +2,7 @@
 pragma solidity 0.8.11;
 
 import { IERC20 } from "./IERC20.sol";
+import { IVault } from "./IVault.sol";
 import { IExchange } from "./IExchange.sol";
 import { IKeeperCompatible } from "./IKeeperCompatible.sol";
 
@@ -13,18 +14,13 @@ library Errors {
     string internal constant _NothingToSell = "Nothing to sell";
 }
 
-contract Vault is IKeeperCompatible {
+contract Vault is IVault, IKeeperCompatible {
     IERC20 public from;
     IERC20 public to;
     IExchange public exchange;
     address[] public participants;
     mapping(address => uint256) public amountPerDay;
     mapping(address => mapping(IERC20 => uint256)) public balances;
-
-    event Deposit(address indexed sender, uint256 indexed amount);
-    event Withdraw(address indexed sender, IERC20 token, uint256 indexed amount);
-    event Allocate(address indexed sender, uint256 indexed amountPerDay);
-    event Buy(uint256 indexed fromSold, uint256 indexed toBought);
 
     constructor(
         IERC20 from_,
@@ -36,7 +32,7 @@ contract Vault is IKeeperCompatible {
         exchange = exchange_;
     }
 
-    function deposit(uint256 amount) external {
+    function deposit(uint256 amount) external override {
         require(amount > 0, Errors._AmountZero);
 
         balances[msg.sender][from] += amount;
@@ -50,7 +46,7 @@ contract Vault is IKeeperCompatible {
         emit Deposit(msg.sender, amount);
     }
 
-    function withdraw(IERC20 token, uint256 amount) external {
+    function withdraw(IERC20 token, uint256 amount) external override {
         require(amount > 0, Errors._AmountZero);
         require(token == from || token == to, Errors._WrongToken);
 
@@ -64,7 +60,7 @@ contract Vault is IKeeperCompatible {
         emit Withdraw(msg.sender, token, amount);
     }
 
-    function allocate(uint256 amountPerDay_) external {
+    function allocate(uint256 amountPerDay_) external override {
         require(amountPerDay_ > 0, Errors._AmountZero);
         require(amountPerDay_ <= balances[msg.sender][from], Errors._ExceedsBalance);
 
@@ -89,7 +85,7 @@ contract Vault is IKeeperCompatible {
         return (upkeepNeeded, performData);
     }
 
-    function buy() public returns (uint256) {
+    function buy() public override returns (uint256) {
         require(from.balanceOf(address(this)) > 0, Errors._BalanceZero);
 
         uint256 fromSold = _calcAmountToSell();
