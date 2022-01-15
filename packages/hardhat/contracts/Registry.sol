@@ -11,7 +11,7 @@ library Errors {
 }
 
 contract Registry {
-    struct VaultInfo {
+    struct Vault {
         uint256 id;
         IVault vault;
         IERC20 from;
@@ -20,7 +20,7 @@ contract Registry {
     }
 
     uint256 public nextVaultId;
-    mapping(uint256 => VaultInfo) public vaults;
+    mapping(uint256 => Vault) public vaults;
     mapping(IERC20 => mapping(IERC20 => IVault)) public tokensToVault;
 
     event AddVault(uint256 indexed id, IVault indexed vault, IERC20 from, IERC20 to);
@@ -46,9 +46,7 @@ contract Registry {
         uint256 id = nextVaultId;
         nextVaultId++;
 
-        VaultInfo memory vaultInfo = VaultInfo({ id: id, vault: vault, from: from, to: to, isEntity: true });
-
-        vaults[id] = vaultInfo;
+        vaults[id] = Vault({ id: id, vault: vault, from: from, to: to, isEntity: true });
         tokensToVault[from][to] = vault;
 
         emit AddVault(id, vault, from, to);
