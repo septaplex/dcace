@@ -110,4 +110,15 @@ describe('Registry', () => {
       expect(await registry.getVault(id)).to.deep.equal([id, vault.address, from, to, isEntity])
     })
   })
+
+  describe('#nextVaultId()', () => {
+    it('should start with a value of 0', async () => {
+      expect(await registry.nextVaultId()).to.equal(0)
+    })
+
+    it('should be possible to get the value of the next Vault id', async () => {
+      await registry.connect(owner).addVault(vault.address)
+      expect(await registry.nextVaultId()).to.equal(1)
+    })
+  })
 })
