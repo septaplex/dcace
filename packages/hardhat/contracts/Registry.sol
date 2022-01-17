@@ -3,6 +3,7 @@ pragma solidity 0.8.11;
 
 import { IERC20 } from "./IERC20.sol";
 import { IVault } from "./IVault.sol";
+import { Ownable } from "./Ownable.sol";
 
 library Errors {
     string internal constant _ZeroAddress = "Can't be the zero address";
@@ -10,7 +11,7 @@ library Errors {
     string internal constant _DoesNotExist = "Vault doesn't exist";
 }
 
-contract Registry {
+contract Registry is Ownable {
     struct Vault {
         uint256 id;
         IVault vault;
@@ -31,7 +32,7 @@ contract Registry {
         _;
     }
 
-    function addVault(IVault vault) external returns (uint256) {
+    function addVault(IVault vault) external onlyOwner returns (uint256) {
         require(address(vault) != address(0), Errors._ZeroAddress);
 
         IERC20 from = vault.from();
@@ -54,7 +55,7 @@ contract Registry {
         return id;
     }
 
-    function removeVault(uint256 id) external vaultExists(id) returns (bool) {
+    function removeVault(uint256 id) external onlyOwner vaultExists(id) returns (bool) {
         IVault vault = vaults[id].vault;
         IERC20 from = vaults[id].from;
         IERC20 to = vaults[id].to;
