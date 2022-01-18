@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import { IERC20 } from "./IERC20.sol";
-import { IVault } from "./IVault.sol";
-import { IExchange } from "./IExchange.sol";
-import { IKeeperCompatible } from "./IKeeperCompatible.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IVault } from "./interfaces/IVault.sol";
+import { IExchange } from "./interfaces/IExchange.sol";
+import { IKeeperCompatible } from "./interfaces/IKeeperCompatible.sol";
 
 library Errors {
     string internal constant _AmountZero = "Amount can't be 0";

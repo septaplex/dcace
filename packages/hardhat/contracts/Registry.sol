@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import { IERC20 } from "./IERC20.sol";
-import { IVault } from "./IVault.sol";
 import { Ownable } from "./Ownable.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IVault } from "./interfaces/IVault.sol";
 
 library Errors {
     string internal constant _ZeroAddress = "Can't be the zero address";

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import { IERC20 } from "./IERC20.sol";
-import { IExchange } from "./IExchange.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IExchange } from "./interfaces/IExchange.sol";
 
 // Adaption of https://etherscan.io/address/0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F#code
 interface IUniswapV2Router02 {

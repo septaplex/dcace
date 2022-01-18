@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import { IERC20 } from "./IERC20.sol";
-import { IExchange } from "./IExchange.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IExchange } from "./interfaces/IExchange.sol";
 
 contract MockExchange is IExchange {
     function swap(
