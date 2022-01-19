@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import { ReentrancyGuard } from "./ReentrancyGuard.sol";
+import { ReentrancyGuard } from "../ReentrancyGuard.sol";
 
 contract MockReentrancyGuard is ReentrancyGuard {
     uint256 public invokeCount;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import { Ownable } from "./Ownable.sol";
+import { Ownable } from "../Ownable.sol";
 
 contract MockOwnable is Ownable {
     event Success(address indexed sender, address indexed owner);
