@@ -5,6 +5,7 @@ import { IERC20 } from "./interfaces/IERC20.sol";
 import { IVault } from "./interfaces/IVault.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 import { IKeeperCompatible } from "./interfaces/IKeeperCompatible.sol";
+import { ReentrancyGuard } from "./ReentrancyGuard.sol";
 
 library Errors {
     string internal constant _AmountZero = "Amount can't be 0";
@@ -14,7 +15,7 @@ library Errors {
     string internal constant _NothingToSell = "Nothing to sell";
 }
 
-contract Vault is IVault, IKeeperCompatible {
+contract Vault is ReentrancyGuard, IVault, IKeeperCompatible {
     IERC20 public from;
     IERC20 public to;
     IExchange public exchange;
@@ -46,7 +47,7 @@ contract Vault is IVault, IKeeperCompatible {
         emit Deposit(msg.sender, amount);
     }
 
-    function withdraw(IERC20 token, uint256 amount) external override {
+    function withdraw(IERC20 token, uint256 amount) external override nonReentrant {
         require(amount > 0, Errors._AmountZero);
         require(token == from || token == to, Errors._WrongToken);
 
