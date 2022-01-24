@@ -6,9 +6,13 @@ export default async ({ getNamedAccounts, deployments }: HardhatRuntimeEnvironme
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
+  const toSell = process.env.TO_SELL_ADDRESS
+  const toBuy = process.env.TO_BUY_ADDRESS
+  const exchange = process.env.EXCHANGE_ADDRESS
+
   const { address } = await deploy('CronSwapper', {
     from: deployer,
-    args: [],
+    args: [toSell, toBuy, exchange],
     log: true
   })
 

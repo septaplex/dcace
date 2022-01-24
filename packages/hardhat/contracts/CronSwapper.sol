@@ -1,10 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-contract CronSwapper {
-    bool public isDeployed;
+import { IERC20 } from "./interfaces/IERC20.sol";
+import { IExchange } from "./interfaces/IExchange.sol";
 
-    constructor() {
-        isDeployed = true;
+contract CronSwapper {
+    IERC20 public immutable toSell;
+    IERC20 public immutable toBuy;
+    IExchange public immutable exchange;
+
+    constructor(
+        IERC20 toSell_,
+        IERC20 toBuy_,
+        IExchange exchange_
+    ) {
+        toSell = toSell_;
+        toBuy = toBuy_;
+        exchange = exchange_;
     }
 }
