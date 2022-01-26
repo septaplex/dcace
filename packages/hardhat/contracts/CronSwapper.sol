@@ -7,6 +7,8 @@ import { IExchange } from "./interfaces/IExchange.sol";
 library Errors {
     string internal constant _AmountZero = "Amount can't be 0";
     string internal constant _DurationZero = "Duration can't be 0";
+    string internal constant _NothingToSell = "Nothing to sell";
+    string internal constant _FunctionCalledToday = "Function already called today";
 }
 
 contract CronSwapper {
@@ -27,7 +29,9 @@ contract CronSwapper {
     uint256 public nextAllocationId;
     mapping(uint256 => uint256) public removeAmount;
     mapping(uint256 => Allocation) public allocations;
+    mapping(uint256 => uint256) public toBuyPriceCumulative;
 
+    event Swap(uint256 indexed toSellSold, uint256 toBuyBought, uint256 toBuyPrice);
     event Enter(uint256 indexed id, address indexed sender, uint256 indexed amount, uint256 startDay, uint256 endDay);
 
     constructor(
@@ -73,8 +77,43 @@ contract CronSwapper {
         return id;
     }
 
+    function swap() external returns (uint256, uint256) {
+        uint256 today = _today();
+        require(lastExecution < today, Errors._FunctionCalledToday);
+        require(dailyAmount > 0, Errors._NothingToSell);
+
+        toSell.approve(address(exchange), dailyAmount);
+        uint256 toBuyBought = exchange.swap(toSell, toBuy, dailyAmount);
+        uint256 toSellSold = dailyAmount;
+
+        uint256 toBuyPrice = toBuyBought / dailyAmount;
+
+        toBuyPriceCumulative[today] += toBuyPriceCumulative[lastExecution] + toBuyPrice;
+
+        uint256 amountToRemove = _calcAmountToRemove();
+        dailyAmount -= amountToRemove;
+
+        lastExecution = today;
+
+        emit Swap(toSellSold, toBuyBought, toBuyPrice);
+
+        return (toBuyBought, toBuyPrice);
+    }
+
     function _today() private view returns (uint256) {
         // solhint-disable-next-line not-rely-on-time
         return block.timestamp / 1 days;
+    }
+
+    // NOTE: The number of iterations is "bound" given that a (large) gap between
+    //  executions should be a rare occasion
+    function _calcAmountToRemove() private view returns (uint256) {
+        uint256 amountToRemove;
+        uint256 today = _today();
+        uint256 dayDiff = today - lastExecution;
+        for (uint256 i = 0; i < dayDiff; i++) {
+            amountToRemove += removeAmount[today - i];
+        }
+        return amountToRemove;
     }
 }
