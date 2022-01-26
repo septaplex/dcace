@@ -54,7 +54,12 @@ contract CronSwapper {
             startDay += 1;
         }
 
-        uint256 endDay = startDay + duration;
+        // We have to subtract 1 from the `duration` given that we'll also swap
+        //  on the `startDay`
+        // If we have a duration of 1, the `endDay` should be the `startDay`
+        // If we have a duration of 2, the `endDay` should be the `startDay` + 1
+        // ...
+        uint256 endDay = startDay + duration - 1;
         dailyAmount += amount;
         removeAmount[endDay] += amount;
 

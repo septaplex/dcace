@@ -86,7 +86,8 @@ describe('CronSwapper', () => {
       await usdc.connect(user).approve(swapper.address, total)
 
       const startDay = today
-      const endDay = startDay + duration
+      // Subtracting 1 given that we'll also swap on the `startDay`
+      const endDay = startDay + duration - 1
 
       await expect(swapper.connect(user).enter(amount, duration))
         .to.emit(swapper, 'Enter')
@@ -116,7 +117,40 @@ describe('CronSwapper', () => {
       await usdc.connect(user).approve(swapper.address, total)
 
       const startDay = today + 1
-      const endDay = startDay + duration
+      // Subtracting 1 given that we'll also swap on the `startDay`
+      const endDay = startDay + duration - 1
+
+      await expect(swapper.connect(user).enter(amount, duration))
+        .to.emit(swapper, 'Enter')
+        .withArgs(0, user.address, amount, startDay, endDay)
+
+      expect(await usdc.balanceOf(swapper.address)).to.equal(total)
+      expect(await swapper.dailyAmount()).to.equal(amount)
+      expect(await swapper.removeAmount(endDay)).to.equal(amount)
+      expect(await swapper.nextAllocationId()).to.equal(1)
+      expect(await swapper.allocations(0)).to.deep.equal([
+        BigNumber.from(0),
+        amount,
+        BigNumber.from(startDay),
+        BigNumber.from(endDay),
+        user.address
+      ])
+    })
+
+    it('should set the end day to the start day if the duration is 1 day', async () => {
+      await network.provider.send('evm_increaseTime', [SECONDS_PER_DAY])
+      await network.provider.send('evm_mine')
+
+      const today = await getCurrentDay()
+
+      const amount = parseUnits('100', 6)
+      const duration = 1
+
+      const total = amount.mul(duration)
+      await usdc.connect(user).approve(swapper.address, total)
+
+      const startDay = today
+      const endDay = startDay
 
       await expect(swapper.connect(user).enter(amount, duration))
         .to.emit(swapper, 'Enter')
