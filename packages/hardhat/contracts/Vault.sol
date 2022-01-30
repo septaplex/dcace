@@ -15,6 +15,7 @@ library Errors {
     string internal constant _NothingToSell = "Nothing to sell";
 }
 
+// TODO: Rename to DCA1 (or smth. similar --> also update deployment scripts, tests, etc. (do global search))
 contract Vault is ReentrancyGuard, IVault, IKeeperCompatible {
     IERC20 public from;
     IERC20 public to;
@@ -35,6 +36,7 @@ contract Vault is ReentrancyGuard, IVault, IKeeperCompatible {
 
     function deposit(uint256 amount) external override {
         require(amount > 0, Errors._AmountZero);
+        // TODO: Add upper-bound for array
 
         balances[msg.sender][from] += amount;
 
@@ -54,6 +56,8 @@ contract Vault is ReentrancyGuard, IVault, IKeeperCompatible {
         uint256 fromBalance = balances[msg.sender][from];
         uint256 toBalance = balances[msg.sender][to];
         require(amount <= fromBalance || amount <= toBalance, Errors._ExceedsBalance);
+
+        // TODO: Remove user from array once (s)he closes her position
 
         balances[msg.sender][token] -= amount;
         IERC20(token).transfer(msg.sender, amount);
@@ -88,6 +92,7 @@ contract Vault is ReentrancyGuard, IVault, IKeeperCompatible {
 
     function buy() public override returns (uint256) {
         require(from.balanceOf(address(this)) > 0, Errors._BalanceZero);
+        // TODO: Check if sell was already done today
 
         uint256 fromSold = _calcAmountToSell();
         require(fromSold > 0, Errors._NothingToSell);

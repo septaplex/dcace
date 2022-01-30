@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { BigNumber, ContractFactory } from 'ethers'
+import { BigNumber } from 'ethers'
 import { ethers, network } from 'hardhat'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
@@ -35,8 +35,6 @@ describe.only('CronSwapper', () => {
   let keeper: SignerWithAddress
   let deployer: SignerWithAddress
 
-  let swapperFactory: ContractFactory
-
   beforeEach(async () => {
     usdc = await ethers.getContractAt('IERC20', USDC_ADDRESS)
     weth = await ethers.getContractAt('IERC20', WETH_ADDRESS)
@@ -44,17 +42,20 @@ describe.only('CronSwapper', () => {
     toBuy = weth.address
     // Deploy contracts
     ;[deployer, alice, bob, carol, keeper] = await ethers.getSigners()
-    swapperFactory = await ethers.getContractFactory('CronSwapper', deployer)
+    const swapperFactory = await ethers.getContractFactory('CronSwapper', deployer)
     const exchangeFactory = await ethers.getContractFactory('ExchangeSushi', deployer)
     exchange = (await exchangeFactory.deploy(SUSHI_V2_ROUTER)) as ExchangeSushi
     swapper = (await swapperFactory.deploy(toSell, toBuy, exchange.address)) as CronSwapper
     // Impersonate Whale account
     await network.provider.send('hardhat_impersonateAccount', [WHALE_ADDRESS])
     user = await ethers.getSigner(WHALE_ADDRESS)
-    // Fund `alice`, `bob` and `carol` with USDC from Whale
-    await usdc.connect(user).transfer(alice.address, parseUnits('5000', 6))
-    await usdc.connect(user).transfer(bob.address, parseUnits('5000', 6))
-    await usdc.connect(user).transfer(carol.address, parseUnits('5000', 6))
+    // // Seed `MockExchange` with tokens from Whale
+    // await usdc.connect(user).transfer(exchange.address, parseUnits('1000', 6))
+    // await wbtc.connect(user).transfer(exchange.address, parseUnits('1000', 8))
+    // // Fund `alice`, `bob` and `carol` with USDC from Whale
+    // await usdc.connect(user).transfer(alice.address, parseUnits('100', 6))
+    // await usdc.connect(user).transfer(bob.address, parseUnits('100', 6))
+    // await usdc.connect(user).transfer(carol.address, parseUnits('100', 6))
   })
 
   it('should deploy the contract with the provided addresses', async () => {
@@ -194,40 +195,23 @@ describe.only('CronSwapper', () => {
       await expect(swapper.connect(keeper).swap()).to.be.revertedWith('Nothing to sell')
     })
 
-    // TODO: Remove
-    it.only('should be possible perform a swap', async () => {
-      // toSell = usdc.address
-      // toBuy = weth.address
-      toSell = weth.address
-      toBuy = usdc.address
-
-      swapper = (await swapperFactory.deploy(toSell, toBuy, exchange.address)) as CronSwapper
-
+    it('should be possible perform a swap', async () => {
       // Approval + Enter
       const duration = 7
-      // const amount = parseUnits('500', 6) // 500 USDC
-      const amount = parseUnits('1', 18) // 1 WETH
+      const amount = parseUnits('100', 6)
       const total = amount.mul(duration)
 
-      // await usdc.connect(user).approve(swapper.address, total)
-      await weth.connect(user).approve(swapper.address, total)
-      swapper.connect(user).enter(amount, duration)
+      await usdc.connect(user).approve(swapper.address, total)
+      await expect(swapper.connect(user).enter(amount, duration))
 
       // Time-travel 1 Day
       await network.provider.send('evm_increaseTime', [SECONDS_PER_DAY])
       await network.provider.send('evm_mine')
 
+      // NOTE: The `MockExchange` we're using will always return 2x `toBuy` for every `toSell`
       const toSellSold = amount
-      // USDC --> WETH
-      // const toBuyBought = parseUnits('0.208393982876370534', 18)
-      // const toBuyPrice = parseUnits('2384.88', 6)
-
-      // WETH --> USDC
-      const toBuyBought = parseUnits('2390.416383', 6)
-      const toBuyPrice = parseUnits('0.00005', 18)
-
-      // Block #13979500
-
+      const toBuyBought = amount.mul(2)
+      const toBuyPrice = 2
       await expect(swapper.connect(keeper).swap())
         .to.emit(swapper, 'Swap')
         .withArgs(toSellSold, toBuyBought, toBuyPrice)
@@ -238,10 +222,10 @@ describe.only('CronSwapper', () => {
       expect(await swapper.toBuyPriceCumulative(today)).to.equal(toBuyPrice)
     })
 
-    xit('should support skipped days between executions', async () => {
+    it('should support skipped days between executions', async () => {
       // Alice: Approval + Enter
       const durationAlice = 3
-      const amountAlice = parseUnits('5', 6)
+      const amountAlice = parseUnits('30', 6)
       const totalAlice = amountAlice.mul(durationAlice)
 
       await usdc.connect(alice).approve(swapper.address, totalAlice)
@@ -273,6 +257,7 @@ describe.only('CronSwapper', () => {
       await network.provider.send('evm_increaseTime', [3 * SECONDS_PER_DAY])
       await network.provider.send('evm_mine')
 
+      // NOTE: The `MockExchange` we're using will always return 2x `toBuy` for every `toSell`
       const toSellSold = amountAlice.add(amountBob.add(amountCarol))
       const toBuyBought = toSellSold.mul(2)
       const toBuyPrice = 2
@@ -284,6 +269,49 @@ describe.only('CronSwapper', () => {
       expect(await swapper.lastExecution()).to.equal(today)
       expect(await swapper.dailyAmount()).to.equal(0)
       expect(await swapper.toBuyPriceCumulative(today)).to.equal(toBuyPrice)
+    })
+  })
+
+  // TODO: Remove usage of `MockExchange` and replace it with `ExchangeSushi` to make tests more reasonable
+
+  // TODO: Remove
+  describe.only('#toBuyBalance()', () => {
+    // TODO: Add test case for when there's no gap between keeper executions
+    // TODO: Add test case for when there's no swap at all (balance should be 0)
+    // TODO: Add test for other direction (WETH --> USDC)
+
+    it("should be possible to get the user's balance of the token which is bought", async () => {
+      const id = 0
+
+      // Approval + Enter
+      const duration = 3
+      // const amount = parseUnits('5000', 6) // USDC
+      const amount = parseUnits('1.5', 18) // WETH
+
+      console.log('amount', amount)
+      const total = amount.mul(duration)
+
+      // await usdc.connect(user).approve(swapper.address, total)
+      await weth.connect(user).approve(swapper.address, total)
+      await expect(swapper.connect(user).enter(amount, duration))
+
+      // Time-travel 1 Day --> Day 1 (1st swap)
+      await network.provider.send('evm_increaseTime', [SECONDS_PER_DAY])
+      await network.provider.send('evm_mine')
+      await swapper.connect(keeper).swap()
+
+      // Time-travel 1 Day --> Day 2 (2nd swap)
+      await network.provider.send('evm_increaseTime', [SECONDS_PER_DAY])
+      await network.provider.send('evm_mine')
+      await swapper.connect(keeper).swap()
+
+      console.log(await weth.balanceOf(swapper.address))
+
+      // Time-travel 1 Day --> Day 3 (NO swap)
+      await network.provider.send('evm_increaseTime', [SECONDS_PER_DAY])
+      await network.provider.send('evm_mine')
+
+      expect(await swapper.toBuyBalance(id)).to.equal(parseUnits('3.26834615', 18)) // Block #13979500
     })
   })
 })

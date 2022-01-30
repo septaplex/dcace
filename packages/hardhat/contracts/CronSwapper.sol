@@ -4,6 +4,8 @@ pragma solidity 0.8.11;
 import { IERC20 } from "./interfaces/IERC20.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 
+import { console } from "hardhat/console.sol"; // TODO: Remove
+
 library Errors {
     string internal constant _AmountZero = "Amount can't be 0";
     string internal constant _DurationZero = "Duration can't be 0";
@@ -86,7 +88,48 @@ contract CronSwapper {
         uint256 toBuyBought = exchange.swap(toSell, toBuy, dailyAmount);
         uint256 toSellSold = dailyAmount;
 
-        uint256 toBuyPrice = toBuyBought / dailyAmount;
+        // uint256 toBuyPrice = toBuyBought / dailyAmount;
+
+        // uint256 scaledToBuyBought = toBuyBought; // * 10**uint256(toBuy.decimals());
+        // uint256 scaledDailyAmouny = dailyAmount * 10**uint256(toBuy.decimals() - toSell.decimals());
+        // uint256 toBuyPrice = scaledToBuyBought / scaledDailyAmouny;
+
+        // uint256 toBuyPrice = (toBuyBought * 10**uint256(toBuy.decimals() - toSell.decimals())) / dailyAmount;
+
+        // TODO: This works (kind of)
+        // uint256 toBuyPrice = ((toSellSold * 10**uint256(toBuy.decimals() - toSell.decimals())) / toBuyBought) *
+        //     10**uint256(toSell.decimals());
+        // uint256 toBuyPrice = (toSellSold * 10**uint256(toBuy.decimals() - toSell.decimals())) / toBuyBought;
+
+        // TODO: Similar solution to the one above but based on the insights from below
+        // uint256 toBuyPrice = ((((toSellSold * 10**uint256(toBuy.decimals() - toSell.decimals())) / toBuyBought)) *
+        //     10**uint256(toSell.decimals() - 6));
+
+        // TODO: This is the result of the `toBuyPrice` in wei (don't touch)
+        // TODO: Try to simplify (e.g. remove the rescaling)
+        // uint256 toBuyPrice =
+        //     ((((toSellSold * 1e18 * 10**uint256(toBuy.decimals() - toSell.decimals())) / toBuyBought) *
+        //         1e18) * 10**uint256(toSell.decimals() - 6)) / 1e18;
+
+        // TODO: Test this by buing USDC with WETH (it should also be denominated in 1e18)
+        // uint256 toBuyPrice = (
+        //     (((toSellSold * 1e18 * 10**uint256(toBuy.decimals() - toSell.decimals())) / toBuyBought) * 1e18)
+        // ) / 1e18;
+
+        // uint256 toBuyPrice = (
+        //     (((toSellSold * 1e18 * 10**uint256(toBuy.decimals() - toSell.decimals())) / toBuyBought) * 1e18)
+        // ) /
+        //     1e18 /
+        //     1e12;
+
+        // uint256 toBuyPrice = (toSellSold * 1e18) / toBuyBought;
+        uint256 toBuyPrice = (toSellSold * 10**uint256(toBuy.decimals())) / toBuyBought; // <-- simplest solution
+
+        console.log("toBuyBought: %s", toBuyBought);
+        console.log("toSellSold: %s", toSellSold);
+        console.log("toBuyPrice: %s", toBuyPrice);
+
+        //5000000000000000000000
 
         toBuyPriceCumulative[today] += toBuyPriceCumulative[lastExecution] + toBuyPrice;
 
@@ -100,9 +143,31 @@ contract CronSwapper {
         return (toBuyBought, toBuyPrice);
     }
 
+    function toBuyBalance(uint256 id) external view returns (uint256) {
+        Allocation memory allocation = allocations[id];
+        // uint256 cumulativePrice = toBuyPriceCumulative[lastDay] - toBuyPriceCumulative[startDay];
+        uint256 cumulativePrice = _findNearestCumulativeToBuyPrice(allocation.startDay, allocation.endDay);
+        // TODO: Find
+        console.log("cumulativePrice: %s", cumulativePrice); // TODO:
+        // TODO: do we need to divide by 1e18 here given that the USDC value in in wei?
+        return cumulativePrice * allocation.amount;
+    }
+
     function _today() private view returns (uint256) {
         // solhint-disable-next-line not-rely-on-time
         return block.timestamp / 1 days;
+    }
+
+    // NOTE: The number of iterations is "bound" given that a (large) gap between
+    //  executions should be a rare occasion
+    function _findNearestCumulativeToBuyPrice(uint256 startDay, uint256 endDay) private view returns (uint256) {
+        uint256 i;
+        uint256 cumulativePrice;
+        while (cumulativePrice == 0 && startDay != endDay) {
+            cumulativePrice = toBuyPriceCumulative[endDay - i];
+            i += 1;
+        }
+        return cumulativePrice;
     }
 
     // NOTE: The number of iterations is "bound" given that a (large) gap between
